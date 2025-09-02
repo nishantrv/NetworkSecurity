@@ -29,7 +29,7 @@ class DataIngestion:
 
     def export_collection_as_dataframe(self):
         """
-        read function in mongo db
+        Read data from MongoDb
         """
 
         try:
@@ -39,7 +39,7 @@ class DataIngestion:
             collection = self.mongo_client[database_name][collection_name]
 
             df = pd.DataFrame(list(collection.find()))
-            if "__id" in df.columns.to_list():
+            if "_id" in df.columns.to_list():
                 df = df.drop(columns=["_id"],axis=1)
             
             df.replace({"na":np.nan},inplace=True)
@@ -55,6 +55,7 @@ class DataIngestion:
             os.makedirs(dir_path,exist_ok=True)
             dataframe.to_csv(feature_store_file_path, index=False, header=True)
             return dataframe
+        
         except Exception as e:
             raise NetworkSecurityException(e,sys)
     
@@ -90,7 +91,7 @@ class DataIngestion:
             dataframe=self.export_data_into_feature_store(dataframe)
             self.split_data_as_train_test(dataframe)
             dataingestionartifact = DataIngestionArtifact(trained_file_path=self.data_ingestion_config.training_file_path
-                                                           ,test_file_path = self.data_ingestion_config.testing_file_path)
+                                                        ,test_file_path=self.data_ingestion_config.testing_file_path)
             return dataingestionartifact
         except Exception as e:
             raise NetworkSecurityException
