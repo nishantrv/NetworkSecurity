@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/nisha/Desktop/MLOPS_02/Projects/NetworkSecurity/mlruns/0/models/m-9d1189f752004709835aaae993a6dc9e/artifacts
+creation_timestamp: 1756982597103
+experiment_id: '0'
+last_updated_timestamp: 1756982603074
+model_id: m-9d1189f752004709835aaae993a6dc9e
+model_type: null
+name: model
+source_run_id: 871f14ae28624269ab0dac0f2f0a3244
+status: 2
+status_message: null
