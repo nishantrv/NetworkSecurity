@@ -23,6 +23,15 @@ from sklearn.ensemble import (
 )
 
 import mlflow
+from urllib.parse import urlparse
+
+import dagshub
+#dagshub.init(repo_owner='nishantrv', repo_name='NetworkSecurity', mlflow=True)
+
+os.environ["MLFLOW_TRACKING_URI"]="https://dagshub.com/nishantrv/NetworkSecurity.mlflow"
+os.environ["MLFLOW_TRACKING_USERNAME"]="nishantrv"
+os.environ["MLFLOW_TRACKING_PASSWORD"]=""
+
 
 class ModelTrainer:
     def __init__(self, model_trainer_config:ModelTrainerConfig,data_transformation_artifact:DataTransformationArtifact):
@@ -33,15 +42,34 @@ class ModelTrainer:
             raise NetworkSecurityException(e,sys)
         
     def track_mlflow(self,best_model, classificationmetric):
+        import tempfile, shutil, os, mlflow, joblib
+        from urllib.parse import urlparse
         with mlflow.start_run():
             f1_score = classificationmetric.f1_score
             precision_score = classificationmetric.precision_score
             recall_score = classificationmetric.recall_score
+
             mlflow.log_metric("f1_score",f1_score)
             mlflow.log_metric("precision",precision_score)
             mlflow.log_metric("recall_score",recall_score)
-            mlflow.sklearn.log_model(best_model,"model")
-    
+            # mlflow.sklearn.log_model(best_model,"model")
+            # if tracking_url_type_store != "file":
+
+            #     # Register the model
+            #     # There are other ways to use the Model Registry, which depends on the use case,
+            #     # please refer to the doc for more information:
+            #     # https://mlflow.org/docs/latest/model-registry.html#api-workflow
+            #     mlflow.sklearn.log_model(best_model, "model", registered_model_name=best_model)
+            # else:
+            #     mlflow.sklearn.log_model(best_model, "model")
+            tmpdir = tempfile.mkdtemp()
+            try:
+                # Option 1: raw pickle
+                pkl_path = os.path.join(tmpdir, "model.pkl")
+                joblib.dump(best_model, pkl_path)
+                mlflow.log_artifact(pkl_path, artifact_path="model")
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
     def train_model(self,X_train,y_train, x_test, y_test):
         
         models = {
@@ -55,21 +83,21 @@ class ModelTrainer:
         params={
             "Decision Tree": {
                 'criterion':['gini', 'entropy', 'log_loss'],
-                # 'splitter':['best','random'],
-                # 'max_features':['sqrt','log2'],
+                'splitter':['best','random'],
+                'max_features':['sqrt','log2'],
             },
             "Random Forest":{
-                # 'criterion':['gini', 'entropy', 'log_loss'],
+                'criterion':['gini', 'entropy', 'log_loss'],
                 
-                # 'max_features':['sqrt','log2',None],
+                'max_features':['sqrt','log2',None],
                 'n_estimators': [8,16,32,128,256]
             },
             "Gradient Boosting":{
-                # 'loss':['log_loss', 'exponential'],
+                'loss':['log_loss', 'exponential'],
                 'learning_rate':[.1,.01,.05,.001],
                 'subsample':[0.6,0.7,0.75,0.85,0.9],
-                # 'criterion':['squared_error', 'friedman_mse'],
-                # 'max_features':['auto','sqrt','log2'],
+                'criterion':['squared_error', 'friedman_mse'],
+                'max_features':['auto','sqrt','log2'],
                 'n_estimators': [8,16,32,64,128,256]
             },
             "Logistic Regression":{},
@@ -112,7 +140,9 @@ class ModelTrainer:
         os.makedirs(model_dir_path,exist_ok=True)
 
         Network_Model = NetworkModel(preprocessor=preprocessor, model = best_model)
-        save_object(self.model_trainer_config.trained_model_file_path,obj=NetworkModel)
+        save_object(self.model_trainer_config.trained_model_file_path,obj=Network_Model)
+
+        save_object("final_model/model.pkl",best_model)
 
         ##Model Trainer Artifact
         model_trainer_artifact=ModelTrainerArtifact(trained_model_file_path=self.model_trainer_config.trained_model_file_path,
@@ -141,7 +171,7 @@ class ModelTrainer:
             )
             
             model_trainer_artifact = self.train_model(x_train, y_train, x_test, y_test)
-
+            return model_trainer_artifact
 
         except Exception as e:
             raise NetworkSecurityException(e,sys)
